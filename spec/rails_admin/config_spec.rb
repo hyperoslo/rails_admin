@@ -75,22 +75,6 @@ describe RailsAdmin::Config do
     end
   end
 
-  describe ".attr_accessible_role" do
-    it "sould be :default by default" do
-      expect(RailsAdmin.config.attr_accessible_role.call).to eq(:default)
-    end
-
-    it "sould be configurable with user role for example" do
-      RailsAdmin.config do |config|
-        config.attr_accessible_role do
-          :admin
-        end
-      end
-
-      expect(RailsAdmin.config.attr_accessible_role.call).to eq(:admin)
-    end
-  end
-
   describe ".main_app_name" do
 
     it "as a default meaningful dynamic value" do
@@ -114,7 +98,7 @@ describe RailsAdmin::Config do
       end
 
       it "initializes the authorization adapter" do
-        ExampleModule::AuthorizationAdapter.should_receive(:new).with(RailsAdmin::Config)
+        expect(ExampleModule::AuthorizationAdapter).to receive(:new).with(RailsAdmin::Config)
         RailsAdmin.config do |config|
           config.authorize_with(:example)
         end
@@ -123,7 +107,7 @@ describe RailsAdmin::Config do
 
       it "passes through any additional arguments to the initializer" do
         options = { :option => true }
-        ExampleModule::AuthorizationAdapter.should_receive(:new).with(RailsAdmin::Config, options)
+        expect(ExampleModule::AuthorizationAdapter).to receive(:new).with(RailsAdmin::Config, options)
         RailsAdmin.config do |config|
           config.authorize_with(:example, options)
         end
@@ -141,7 +125,7 @@ describe RailsAdmin::Config do
       end
 
       it "initializes the auditing adapter" do
-        ExampleModule::AuditingAdapter.should_receive(:new).with(RailsAdmin::Config)
+        expect(ExampleModule::AuditingAdapter).to receive(:new).with(RailsAdmin::Config)
         RailsAdmin.config do |config|
           config.audit_with(:example)
         end
@@ -150,7 +134,7 @@ describe RailsAdmin::Config do
 
       it "passes through any additional arguments to the initializer" do
         options = { :option => true }
-        ExampleModule::AuditingAdapter.should_receive(:new).with(RailsAdmin::Config, options)
+        expect(ExampleModule::AuditingAdapter).to receive(:new).with(RailsAdmin::Config, options)
         RailsAdmin.config do |config|
           config.audit_with(:example, options)
         end
@@ -169,7 +153,7 @@ describe RailsAdmin::Config do
         RailsAdmin.config do |config|
           config.audit_with(:example)
         end
-        expect(RailsAdmin.config.audit_with.call).not_to raise_exception ArgumentError
+        expect{ RailsAdmin.config.audit_with.call }.not_to raise_error
       end
     end
   end
@@ -184,7 +168,7 @@ describe RailsAdmin::Config do
       end
 
       it "initializes configuration adapter" do
-        ExampleModule::ConfigurationAdapter.should_receive(:new)
+        expect(ExampleModule::ConfigurationAdapter).to receive(:new)
         RailsAdmin.config do |config|
           config.configure_with(:example)
         end

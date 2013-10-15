@@ -16,8 +16,6 @@ module RailsAdmin
       request.env['warden'].try(:authenticate!)
     end
 
-    DEFAULT_ATTR_ACCESSIBLE_ROLE = Proc.new { :default }
-
     DEFAULT_AUTHORIZE = Proc.new {}
 
     DEFAULT_AUDIT = Proc.new {}
@@ -99,12 +97,6 @@ module RailsAdmin
       def authenticate_with(&blk)
         @authenticate = blk if blk
         @authenticate || DEFAULT_AUTHENTICATION
-      end
-
-
-      def attr_accessible_role(&blk)
-        @attr_accessible_role = blk if blk
-        @attr_accessible_role || DEFAULT_ATTR_ACCESSIBLE_ROLE
       end
 
       # Setup auditing/history/versioning provider that observe objects lifecycle
@@ -203,8 +195,8 @@ module RailsAdmin
         possible =
           included_models.map(&:to_s).presence || (
           @@system_models ||= # memoization for tests
-            ([Rails.application] + Rails::Application::Railties.engines).map do |app|
-              (app.paths['app/models'] + app.config.autoload_paths).map do |load_path|
+            ([Rails.application] + Rails::Engine::Railties.engines).map do |app|
+              (app.paths['app/models'].to_a + app.config.autoload_paths).map do |load_path|
                 Dir.glob(app.root.join(load_path)).map do |load_dir|
                   Dir.glob(load_dir + "/**/*.rb").map do |filename|
                     # app/models/module/class.rb => module/class.rb => module/class => Module::Class

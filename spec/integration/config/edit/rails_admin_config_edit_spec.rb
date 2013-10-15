@@ -69,37 +69,6 @@ describe "RailsAdmin Config DSL Edit Section" do
     end
   end
 
-  describe "attr_accessible" do
-
-
-    it "is configurable in the controller scope" do
-
-      RailsAdmin.config do |config|
-        config.excluded_models = []
-        config.attr_accessible_role do
-          _current_user.attr_accessible_role # sould be :custom_role
-        end
-
-        config.model FieldTest do
-          edit do
-            field :string_field
-            field :restricted_field
-            field :protected_field
-          end
-        end
-      end
-
-      visit new_path(:model_name => "field_test")
-      fill_in "field_test[string_field]", :with => "No problem here"
-      fill_in "field_test[restricted_field]", :with => "I'm allowed to do that as :custom_role only"
-      should have_no_selector "field_test[protected_field]"
-      click_button "Save" # first(:button, "Save").click
-      @field_test = FieldTest.first
-      expect(@field_test.string_field).to eq("No problem here")
-      expect(@field_test.restricted_field).to eq("I'm allowed to do that as :custom_role only")
-    end
-  end
-
   describe "css hooks" do
     it "is present" do
       visit new_path(:model_name => "team")
@@ -692,18 +661,32 @@ describe "RailsAdmin Config DSL Edit Section" do
   end
 
   describe "nested form" do
-    it "works" do
+    it "works", :js => true do
       @record = FactoryGirl.create :field_test
       @record.nested_field_tests = [NestedFieldTest.create!(:title => 'title 1'), NestedFieldTest.create!(:title => 'title 2')]
       visit edit_path(:model_name => "field_test", :id => @record.id)
+
+      find('#field_test_comment_attributes_field .add_nested_fields').click()
       fill_in "field_test_comment_attributes_content", :with => 'nested comment content'
-      fill_in "field_test_nested_field_tests_attributes_0_title", :with => 'nested field test title 1 edited'
-      page.find('#field_test_nested_field_tests_attributes_1__destroy').set('true')
+     
+      fill_in "field_test_nested_field_tests_attributes_0_title", :with => 'nested field test title 1 edited', :visible => false
+      find('#field_test_nested_field_tests_attributes_1__destroy', :visible => false).set('true')
+
       click_button "Save" # first(:button, "Save").click
+
       @record.reload
-      expect(@record.comment.content).to eq('nested comment content')
+
+      expect(@record.comment.content.strip).to eq('nested comment content')
       expect(@record.nested_field_tests.length).to eq(1)
       expect(@record.nested_field_tests[0].title).to eq('nested field test title 1 edited')
+    end
+
+    it "is optional for has_one" do
+      @record = FactoryGirl.create :field_test
+      visit edit_path(:model_name => "field_test", :id => @record.id)
+      click_button "Save"
+      @record.reload
+      expect(@record.comment).to be_nil
     end
 
     it "sets bindings[:object] to nested object" do
@@ -736,12 +719,12 @@ describe "RailsAdmin Config DSL Edit Section" do
 
     describe "with nested_attributes_options given" do
       before do
-        FieldTest.nested_attributes_options.stub(:[]).with(any_args()).
+        allow(FieldTest.nested_attributes_options).to receive(:[]).with(any_args()).
           and_return({:allow_destroy=>true, :update_only=>false})
       end
 
       it "does not show add button when :update_only is true" do
-        FieldTest.nested_attributes_options.stub(:[]).with(:nested_field_tests).
+        allow(FieldTest.nested_attributes_options).to receive(:[]).with(:nested_field_tests).
           and_return({:allow_destroy=>true, :update_only=>true})
         visit new_path(:model_name => "field_test")
         should have_selector('.toggler')
@@ -751,12 +734,12 @@ describe "RailsAdmin Config DSL Edit Section" do
       it "does not show destroy button except for newly created when :allow_destroy is false" do
         @record = FieldTest.create
         @record.nested_field_tests << NestedFieldTest.create!(:title => 'nested title 1')
-        FieldTest.nested_attributes_options.stub(:[]).with(:nested_field_tests).
+        allow(FieldTest.nested_attributes_options).to receive(:[]).with(:nested_field_tests).
           and_return({:allow_destroy=>false, :update_only=>false})
         visit edit_path(:model_name => "field_test", :id => @record.id)
         expect(find('#field_test_nested_field_tests_attributes_0_title').value).to eq('nested title 1')
         should_not have_selector('form .remove_nested_fields')
-        expect(find('div#nested_field_tests_fields_blueprint')[:'data-blueprint']).to match(
+        expect(find('div#nested_field_tests_fields_blueprint', :visible => false)[:'data-blueprint']).to match(
           /<a[^>]* class="remove_nested_fields"[^>]*>/)
       end
     end
@@ -765,7 +748,7 @@ describe "RailsAdmin Config DSL Edit Section" do
       it "does not hide fields which are not associated with nesting parent field's model" do
         visit new_path(:model_name => "field_test")
         should_not have_selector('select#field_test_nested_field_tests_attributes_new_nested_field_tests_field_test_id')
-        expect(find('div#nested_field_tests_fields_blueprint')[:'data-blueprint']).to match(
+        expect(find('div#nested_field_tests_fields_blueprint', :visible => false)[:'data-blueprint']).to match(
           /<select[^>]* id="field_test_nested_field_tests_attributes_new_nested_field_tests_another_field_test_id"[^>]*>/)
       end
     end
@@ -815,18 +798,10 @@ describe "RailsAdmin Config DSL Edit Section" do
   end
 
   describe "CKEditor Support" do
-
-    it "starts with CKEditor disabled" do
-       field = RailsAdmin::config("Draft").edit.fields.find{|f| f.name == :notes}
-       expect(field.ckeditor).to be_false
-    end
-
     it "adds Javascript to enable CKEditor" do
       RailsAdmin.config Draft do
         edit do
-          field :notes do
-            ckeditor true
-          end
+          field :notes, :ck_editor
         end
       end
       visit new_path(:model_name => "draft")
@@ -835,18 +810,10 @@ describe "RailsAdmin Config DSL Edit Section" do
   end
 
   describe "CodeMirror Support" do
-
-    it "starts with CodeMirror disabled" do
-       field = RailsAdmin::config("Draft").edit.fields.find{|f| f.name == :notes}
-       expect(field.codemirror).to be_false
-    end
-
     it "adds Javascript to enable CodeMirror" do
       RailsAdmin.config Draft do
         edit do
-          field :notes do
-            codemirror true
-          end
+          field :notes, :code_mirror
         end
       end
       visit new_path(:model_name => "draft")
@@ -855,18 +822,10 @@ describe "RailsAdmin Config DSL Edit Section" do
   end
 
   describe "bootstrap_wysihtml5 Support" do
-
-    it "starts with bootstrap_wysihtml5 disabled" do
-       field = RailsAdmin::config("Draft").edit.fields.find{|f| f.name == :notes}
-       expect(field.bootstrap_wysihtml5).to be_false
-    end
-
     it "adds Javascript to enable bootstrap_wysihtml5" do
       RailsAdmin.config Draft do
         edit do
-          field :notes do
-            bootstrap_wysihtml5 true
-          end
+          field :notes, :wysihtml5
         end
       end
       visit new_path(:model_name => "draft")
@@ -876,11 +835,10 @@ describe "RailsAdmin Config DSL Edit Section" do
     it "should include custom wysihtml5 configuration" do
       RailsAdmin.config Draft do
         edit do
-          field :notes do
-            bootstrap_wysihtml5 true
-            bootstrap_wysihtml5_config_options :image => false
-            bootstrap_wysihtml5_css_location 'stub_css.css'
-            bootstrap_wysihtml5_js_location 'stub_js.js'
+          field :notes, :wysihtml5 do
+            config_options :image => false
+            css_location 'stub_css.css'
+            js_location 'stub_js.js'
           end
         end
       end

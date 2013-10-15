@@ -56,11 +56,11 @@ module RailsAdmin
       end
 
       register_instance_option :label do
-        (@label ||= {})[::I18n.locale] ||= abstract_model.model.model_name.human(:default => abstract_model.model.model_name.demodulize.underscore.humanize)
+        (@label ||= {})[::I18n.locale] ||= abstract_model.model.model_name.human
       end
 
       register_instance_option :label_plural do
-        (@label_plural ||= {})[::I18n.locale] ||= abstract_model.model.model_name.human(:count => 'other', :default => label.pluralize)
+        (@label_plural ||= {})[::I18n.locale] ||= abstract_model.model.model_name.human(:count => Float::INFINITY, :default => label.pluralize)
       end
 
       def pluralize(count)
