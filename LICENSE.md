@@ -1,5 +1,7 @@
 Licensed under the **MIT** license
 
+> Copyright (c) 2010 - 2014 Erik Michaels-Ober
+>
 > Copyright (c) 2014 Hyper Interaktiv AS
 >
 > Permission is hereby granted, free of charge, to any person obtaining
